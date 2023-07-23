@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.provider.Telephony
+import android.text.format.DateFormat
 import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.Toast
@@ -58,7 +59,7 @@ class SMSActivity : AppCompatActivity() {
 
     private fun getSMSList(contactNumber: String?): List<String> {
         val smsList = mutableListOf<String>()
-        val projection = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.TYPE)
+        val projection = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.TYPE, Telephony.Sms.DATE)
 
         val uri: Uri = Telephony.Sms.CONTENT_URI
         val selection = "address = ?"
@@ -75,15 +76,18 @@ class SMSActivity : AppCompatActivity() {
             val addressIndex = it.getColumnIndex(Telephony.Sms.ADDRESS)
             val bodyIndex = it.getColumnIndex(Telephony.Sms.BODY)
             val typeIndex = it.getColumnIndex(Telephony.Sms.TYPE)
+            val dateIndex = it.getColumnIndex(Telephony.Sms.DATE)
 
             while (it.moveToNext()) {
                 val address = it.getString(addressIndex)
                 val body = it.getString(bodyIndex)
                 val type = it.getInt(typeIndex)
+                val date = it.getLong(dateIndex)
 
                 val smsDirection = if (type == Telephony.Sms.MESSAGE_TYPE_INBOX) "Received" else "Sent"
                 val decryptedBody = decryptSMS(body)
-                val smsDetails = "$smsDirection: $address\n$decryptedBody"
+                val formattedDate = DateFormat.format("dd-MM-yyyy HH:mm:ss", date).toString()
+                val smsDetails = "$smsDirection: $address\n$decryptedBody\n$formattedDate"
                 smsList.add(smsDetails)
             }
         }

@@ -5,21 +5,23 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.provider.Telephony
-import android.text.format.DateUtils
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ListView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import android.util.Base64
 
 class SMSActivity : AppCompatActivity() {
     private val requestSmsPermission = 123
+    private val requestContactsPermission = 456
+    private val decryptionKey = "1234567887654321"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,33 +41,28 @@ class SMSActivity : AppCompatActivity() {
                 requestSmsPermission
             )
         } else {
-            contactName?.let {
-                contactNumber?.let { number ->
-                    displaySMS(it, number)
-                }
-            }
+            contactName?.let { displaySMS(it, contactNumber) }
         }
     }
 
-    private fun displaySMS(contactName: String, contactNumber: String) {
+    private fun displaySMS(contactName: String, contactNumber: String?) {
         val smsList = getSMSList(contactNumber)
         if (smsList.isEmpty()) {
             Toast.makeText(this, "No SMS found with $contactName.", Toast.LENGTH_SHORT).show()
         } else {
-            val adapter =
-                SMSAdapter(this, smsList)
+            val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, smsList)
             val smsListView: ListView = findViewById(R.id.smsListView)
             smsListView.adapter = adapter
         }
     }
 
-    private fun getSMSList(contactNumber: String): List<SMSItem> {
-        val smsList = mutableListOf<SMSItem>()
-        val projection = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.TYPE, Telephony.Sms.DATE)
+    private fun getSMSList(contactNumber: String?): List<String> {
+        val smsList = mutableListOf<String>()
+        val projection = arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.TYPE)
 
         val uri: Uri = Telephony.Sms.CONTENT_URI
-        val selection = "address = ? OR address = ?"
-        val selectionArgs = arrayOf(contactNumber, contactNumber)
+        val selection = "address = ?"
+        val selectionArgs = arrayOf(contactNumber ?: "")
         val cursor: Cursor? = contentResolver.query(
             uri,
             projection,
@@ -78,22 +75,37 @@ class SMSActivity : AppCompatActivity() {
             val addressIndex = it.getColumnIndex(Telephony.Sms.ADDRESS)
             val bodyIndex = it.getColumnIndex(Telephony.Sms.BODY)
             val typeIndex = it.getColumnIndex(Telephony.Sms.TYPE)
-            val dateIndex = it.getColumnIndex(Telephony.Sms.DATE)
 
             while (it.moveToNext()) {
                 val address = it.getString(addressIndex)
                 val body = it.getString(bodyIndex)
                 val type = it.getInt(typeIndex)
-                val date = it.getLong(dateIndex)
 
                 val smsDirection = if (type == Telephony.Sms.MESSAGE_TYPE_INBOX) "Received" else "Sent"
-                val smsDetails = SMSItem("$smsDirection: $address", body, date)
+                val decryptedBody = decryptSMS(body)
+                val smsDetails = "$smsDirection: $address\n$decryptedBody"
                 smsList.add(smsDetails)
             }
         }
 
         cursor?.close()
         return smsList
+    }
+
+    private fun decryptSMS(encryptedText: String): String {
+        try {
+            val encryptedBytes = Base64.decode(encryptedText, Base64.DEFAULT)
+            val ivSize = 16
+            val iv = encryptedBytes.copyOfRange(0, ivSize)
+            val encryptedData = encryptedBytes.copyOfRange(ivSize, encryptedBytes.size)
+            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+            val secretKeySpec = SecretKeySpec(decryptionKey.toByteArray(), "AES")
+            val ivParameterSpec = IvParameterSpec(iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
+            return cipher.doFinal(encryptedData).toString(Charsets.UTF_8)
+        } catch (e: Exception) {
+            return encryptedText // Return the original encrypted text if decryption fails
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -106,11 +118,7 @@ class SMSActivity : AppCompatActivity() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     val contactName = intent.getStringExtra("CONTACT_NAME")
                     val contactNumber = intent.getStringExtra("CONTACT_NUMBER")
-                    contactName?.let {
-                        contactNumber?.let { number ->
-                            displaySMS(it, number)
-                        }
-                    }
+                    contactName?.let { displaySMS(it, contactNumber) }
                 } else {
                     Toast.makeText(this, "SMS permission denied.", Toast.LENGTH_SHORT).show()
                 }
@@ -119,36 +127,5 @@ class SMSActivity : AppCompatActivity() {
                 super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             }
         }
-    }
-}
-
-data class SMSItem(val address: String, val body: String, val date: Long)
-
-class SMSAdapter(
-    context: AppCompatActivity,
-    private val smsList: List<SMSItem>
-) : ArrayAdapter<SMSItem>(context, 0, smsList) {
-
-    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-        var view = convertView
-        if (view == null) {
-            view = LayoutInflater.from(context).inflate(R.layout.item_sms, parent, false)
-        }
-
-        val smsItem = smsList[position]
-        val address = smsItem.address
-        val body = smsItem.body
-        val date = smsItem.date
-
-        val addressTextView: TextView = view!!.findViewById(R.id.addressTextView)
-        addressTextView.text = address
-
-        val bodyTextView: TextView = view.findViewById(R.id.bodyTextView)
-        bodyTextView.text = body
-
-        val dateTextView: TextView = view.findViewById(R.id.dateTextView)
-        dateTextView.text = DateUtils.formatDateTime(context, date, DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR)
-
-        return view
     }
 }

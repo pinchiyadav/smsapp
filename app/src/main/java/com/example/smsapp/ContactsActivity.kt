@@ -1,11 +1,11 @@
 package com.example.smsapp
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
-import android.provider.ContactsContract
 import android.provider.Telephony
 import android.widget.ArrayAdapter
 import android.widget.ListView
@@ -56,6 +56,10 @@ class ContactsActivity : AppCompatActivity() {
                 val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, contactsList)
                 val contactListView: ListView = findViewById(R.id.contactListView)
                 contactListView.adapter = adapter
+                contactListView.setOnItemClickListener { _, _, position, _ ->
+                    val selectedContactNumber = contactsList[position]
+                    openSMSActivity(selectedContactNumber)
+                }
             }
         }
     }
@@ -77,9 +81,8 @@ class ContactsActivity : AppCompatActivity() {
             val addressIndex = it.getColumnIndex(Telephony.Sms.ADDRESS)
             while (it.moveToNext()) {
                 val contactNumber = it.getString(addressIndex)
-                val contactName = getContactNameFromNumber(contactNumber)
-                if (!contactsList.contains(contactName)) {
-                    contactsList.add(contactName)
+                if (!contactsList.contains(contactNumber)) {
+                    contactsList.add(contactNumber)
                 }
             }
         }
@@ -88,26 +91,11 @@ class ContactsActivity : AppCompatActivity() {
         return contactsList
     }
 
-    private fun getContactNameFromNumber(contactNumber: String): String {
-        val uri = Uri.withAppendedPath(
-            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-            Uri.encode(contactNumber)
-        )
-        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
-        var contactName = ""
-
-        val cursor: Cursor? = contentResolver.query(uri, projection, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                contactName =
-                    it.getString(it.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME))
-            }
-        }
-
-        cursor?.close()
-        return contactName
+    private fun openSMSActivity(contactNumber: String) {
+        val intent = Intent(this, SMSActivity::class.java)
+        intent.putExtra("CONTACT_NUMBER", contactNumber)
+        startActivity(intent)
     }
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int,

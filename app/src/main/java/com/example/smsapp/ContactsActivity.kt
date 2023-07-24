@@ -1,6 +1,7 @@
 package com.example.smsapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -23,10 +24,13 @@ import androidx.core.content.ContextCompat
 class ContactsActivity : AppCompatActivity() {
     private val requestSmsPermission = 123
     private val requestContactsPermission = 456
+    lateinit var Key: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_contacts)
+        Key = intent.getStringExtra("keyfrommain") ?: ""
+        Toast.makeText(this, Key, Toast.LENGTH_SHORT).show()
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -99,6 +103,7 @@ class ContactsActivity : AppCompatActivity() {
         return contactsList
     }
 
+    @SuppressLint("Range")
     private fun getContactNameFromNumber(contactNumber: String): String {
         val uri = Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
@@ -123,6 +128,7 @@ class ContactsActivity : AppCompatActivity() {
         val intent = Intent(this, SMSActivity::class.java)
         intent.putExtra("CONTACT_NAME", contactName)
         intent.putExtra("CONTACT_NUMBER", contactNumber)
+        intent.putExtra("keyfromcontacts", Key)
         startActivity(intent)
     }
 

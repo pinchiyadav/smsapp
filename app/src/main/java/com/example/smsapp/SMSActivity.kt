@@ -32,10 +32,13 @@ class SMSActivity : AppCompatActivity() {
     private lateinit var editTextMessage: EditText
     private lateinit var buttonSend: View
     private lateinit var contactNumber: String // Store the contact number here
+    lateinit var key: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sms)
+        key = intent.getStringExtra("keyfromcontacts") ?: ""
+        Toast.makeText(this, key, Toast.LENGTH_SHORT).show()
 
         val contactName = intent.getStringExtra("CONTACT_NAME")
         contactNumber = intent.getStringExtra("CONTACT_NUMBER") ?: ""

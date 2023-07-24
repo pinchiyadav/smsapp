@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                 // For example, you can use SharedPreferences to save and access the key in other parts of the app
                 alertDialog.dismiss()
                 val intent = Intent(this, ContactsActivity::class.java)
-                intent.putExtra("KEY", key)
+                intent.putExtra("keyfrommain", key)
                 startActivity(intent)
             } else {
                 editTextKey.error = "Key cannot be empty"

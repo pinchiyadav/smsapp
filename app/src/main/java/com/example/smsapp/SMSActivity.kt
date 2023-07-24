@@ -32,7 +32,7 @@ class SMSActivity : AppCompatActivity() {
     private lateinit var editTextMessage: EditText
     private lateinit var buttonSend: View
     private lateinit var contactNumber: String // Store the contact number here
-    lateinit var key: String
+    private lateinit var key: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,7 +89,7 @@ class SMSActivity : AppCompatActivity() {
         if (smsList.isEmpty()) {
             Toast.makeText(this, "No SMS found with $contactName.", Toast.LENGTH_SHORT).show()
         } else {
-            val adapter = SMSAdapter(this, smsList.reversed(), "1234567887654321") // Pass the decryption key here
+            val adapter = SMSAdapter(this, smsList.reversed(), key) // Pass the decryption key here
             val smsListView: ListView = findViewById(R.id.smsListView)
             smsListView.adapter = adapter
         }
@@ -133,8 +133,7 @@ class SMSActivity : AppCompatActivity() {
     }
 
     private fun sendSMS(contactNumber: String, message: String) {
-        val plaintext = message
-        val encryptedText = tryEncrypt(plaintext, "1234567887654321")
+        val encryptedText = tryEncrypt(message, key)
 
         try {
             val smsManager = SmsManager.getDefault()

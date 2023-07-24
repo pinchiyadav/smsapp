@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -150,7 +151,8 @@ class SMSActivity : AppCompatActivity() {
     private fun tryEncrypt(input: String, key: String): String {
         return try {
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-            val secretKeySpec = SecretKeySpec(key.toByteArray(StandardCharsets.UTF_8), "AES")
+            val keyBytes = generateKey(key) // Generate a fixed-size key from user input
+            val secretKeySpec = SecretKeySpec(keyBytes, "AES")
             val iv = generateRandomIV()
             val ivParameterSpec = IvParameterSpec(iv)
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
@@ -162,6 +164,12 @@ class SMSActivity : AppCompatActivity() {
         } catch (e: Exception) {
             input // Return original text if encryption fails
         }
+    }
+
+    private fun generateKey(key: String): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(key.toByteArray(StandardCharsets.UTF_8))
+        return hash.copyOf(16) // Use the first 16 bytes as the key
     }
 
     private fun generateRandomIV(): ByteArray {
@@ -245,7 +253,8 @@ class SMSAdapter(
     private fun tryDecrypt(encryptedText: String, key: String): String {
         return try {
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-            val secretKeySpec = SecretKeySpec(key.toByteArray(StandardCharsets.UTF_8), "AES")
+            val keyBytes = generateKey(key) // Generate a fixed-size key from user input
+            val secretKeySpec = SecretKeySpec(keyBytes, "AES")
             val ivSize = cipher.blockSize
             val encryptedBytes = Base64.decode(encryptedText, Base64.DEFAULT)
             val iv = encryptedBytes.copyOf(ivSize)
@@ -257,5 +266,11 @@ class SMSAdapter(
         } catch (e: Exception) {
             encryptedText // Return original text if decryption fails
         }
+    }
+
+    private fun generateKey(key: String): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(key.toByteArray(StandardCharsets.UTF_8))
+        return hash.copyOf(16) // Use the first 16 bytes as the key
     }
 }

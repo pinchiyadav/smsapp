@@ -31,13 +31,14 @@ class SMSActivity : AppCompatActivity() {
     private val requestSendSmsPermission = 456
     private lateinit var editTextMessage: EditText
     private lateinit var buttonSend: View
+    private lateinit var contactNumber: String // Store the contact number here
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sms)
 
         val contactName = intent.getStringExtra("CONTACT_NAME")
-        val contactNumber = intent.getStringExtra("CONTACT_NUMBER")
+        contactNumber = intent.getStringExtra("CONTACT_NUMBER") ?: ""
 
         editTextMessage = findViewById(R.id.editTextMessage)
         buttonSend = findViewById(R.id.buttonSend)
@@ -56,9 +57,7 @@ class SMSActivity : AppCompatActivity() {
                         requestSendSmsPermission
                     )
                 } else {
-                    if (contactNumber != null) {
-                        sendSMS(contactNumber, message)
-                    }
+                    sendSMS(contactNumber, message)
                 }
             } else {
                 Toast.makeText(this, "Please enter a message", Toast.LENGTH_SHORT).show()
@@ -77,9 +76,7 @@ class SMSActivity : AppCompatActivity() {
             )
         } else {
             contactName?.let {
-                contactNumber?.let { number ->
-                    displaySMS(it, number)
-                }
+                displaySMS(it, contactNumber)
             }
         }
     }
@@ -140,6 +137,8 @@ class SMSActivity : AppCompatActivity() {
             val smsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(contactNumber, null, encryptedText, null, null)
             Toast.makeText(this, "SMS sent successfully", Toast.LENGTH_SHORT).show()
+            // After sending the SMS, refresh the list to show the sent SMS
+            displaySMS("", contactNumber)
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to send SMS", Toast.LENGTH_SHORT).show()
             e.printStackTrace()
@@ -179,11 +178,8 @@ class SMSActivity : AppCompatActivity() {
             requestSmsPermission -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     val contactName = intent.getStringExtra("CONTACT_NAME")
-                    val contactNumber = intent.getStringExtra("CONTACT_NUMBER")
                     contactName?.let {
-                        contactNumber?.let { number ->
-                            displaySMS(it, number)
-                        }
+                        displaySMS(it, contactNumber)
                     }
                 } else {
                     Toast.makeText(this, "SMS permission denied.", Toast.LENGTH_SHORT).show()
@@ -191,10 +187,11 @@ class SMSActivity : AppCompatActivity() {
             }
             requestSendSmsPermission -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    val contactNumber = intent.getStringExtra("CONTACT_NUMBER")
                     val message = editTextMessage.text.toString()
-                    if (contactNumber != null) {
+                    if (contactNumber.isNotEmpty()) {
                         sendSMS(contactNumber, message)
+                    } else {
+                        Toast.makeText(this, "Contact number not available", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     Toast.makeText(this, "SMS permission denied.", Toast.LENGTH_SHORT).show()

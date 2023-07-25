@@ -38,7 +38,7 @@ class SMSActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sms)
-        key = intent.getStringExtra("keyfromcontacts") ?: ""
+        key = rcs.keys.aeskey.toString()
         Toast.makeText(this, key, Toast.LENGTH_SHORT).show()
 
         val contactName = intent.getStringExtra("CONTACT_NAME")

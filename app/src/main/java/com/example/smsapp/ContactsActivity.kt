@@ -29,8 +29,7 @@ class ContactsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_contacts)
-        Key = intent.getStringExtra("keyfrommain") ?: ""
-        Toast.makeText(this, Key, Toast.LENGTH_SHORT).show()
+
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -128,7 +127,6 @@ class ContactsActivity : AppCompatActivity() {
         val intent = Intent(this, SMSActivity::class.java)
         intent.putExtra("CONTACT_NAME", contactName)
         intent.putExtra("CONTACT_NUMBER", contactNumber)
-        intent.putExtra("keyfromcontacts", Key)
         startActivity(intent)
     }
 

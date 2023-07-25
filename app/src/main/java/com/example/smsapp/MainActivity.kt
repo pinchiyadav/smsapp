@@ -42,12 +42,12 @@ class MainActivity : AppCompatActivity() {
 
         buttonSubmit.setOnClickListener {
             val key = editTextKey.text.toString().trim()
+            rcs.keys.aeskey = key
             if (key.isNotEmpty()) {
                 // Save the key to a preference or global variable for later use
                 // For example, you can use SharedPreferences to save and access the key in other parts of the app
                 alertDialog.dismiss()
                 val intent = Intent(this, ContactsActivity::class.java)
-                intent.putExtra("keyfrommain", key)
                 startActivity(intent)
             } else {
                 editTextKey.error = "Key cannot be empty"

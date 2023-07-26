@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        showKeyInputDialog()
 
         btnSend = findViewById(R.id.button)
         btnContacts = findViewById(R.id.button2)
@@ -25,7 +26,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnContacts.setOnClickListener {
-            showKeyInputDialog()
+            val intent = Intent(this, ContactsActivity::class.java)
+            startActivity(intent)
+
         }
     }
 
@@ -47,8 +50,7 @@ class MainActivity : AppCompatActivity() {
                 // Save the key to a preference or global variable for later use
                 // For example, you can use SharedPreferences to save and access the key in other parts of the app
                 alertDialog.dismiss()
-                val intent = Intent(this, ContactsActivity::class.java)
-                startActivity(intent)
+
             } else {
                 editTextKey.error = "Key cannot be empty"
             }

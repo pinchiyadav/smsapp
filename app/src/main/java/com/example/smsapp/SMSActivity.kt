@@ -134,11 +134,11 @@ class SMSActivity : AppCompatActivity() {
     }
 
     private fun sendSMS(contactNumber: String, message: String) {
-        val encryptedText = tryEncrypt(message, key)
+        val encryptedTextWithHash = tryEncryptWithHash(message, key)
 
         try {
             val smsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(contactNumber, null, encryptedText, null, null)
+            smsManager.sendTextMessage(contactNumber, null, encryptedTextWithHash, null, null)
             Toast.makeText(this, "SMS sent successfully", Toast.LENGTH_SHORT).show()
             // After sending the SMS, refresh the list to show the sent SMS
             displaySMS("", contactNumber)
@@ -148,7 +148,8 @@ class SMSActivity : AppCompatActivity() {
         }
     }
 
-    private fun tryEncrypt(input: String, key: String): String {
+
+    private fun tryEncryptWithHash(input: String, key: String): String {
         return try {
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
             val keyBytes = generateKey(key) // Generate a fixed-size key from user input
@@ -157,14 +158,24 @@ class SMSActivity : AppCompatActivity() {
             val ivParameterSpec = IvParameterSpec(iv)
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
             val encryptedBytes = cipher.doFinal(input.toByteArray(StandardCharsets.UTF_8))
-            val combined = ByteArray(iv.size + encryptedBytes.size)
+
+            val hash = generateHash(input) // Generate the hash of the original message
+            val combined = ByteArray(iv.size + encryptedBytes.size + hash.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
             System.arraycopy(encryptedBytes, 0, combined, iv.size, encryptedBytes.size)
+            System.arraycopy(hash, 0, combined, iv.size + encryptedBytes.size, hash.size)
             Base64.encodeToString(combined, Base64.DEFAULT)
         } catch (e: Exception) {
             input // Return original text if encryption fails
         }
     }
+
+    private fun generateHash(input: String): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(input.toByteArray(StandardCharsets.UTF_8))
+    }
+
+
 
     private fun generateKey(key: String): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -250,23 +261,38 @@ class SMSAdapter(
         return view
     }
 
-    private fun tryDecrypt(encryptedText: String, key: String): String {
+    private fun tryDecrypt(encryptedTextWithHash: String, key: String): String {
         return try {
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
             val keyBytes = generateKey(key) // Generate a fixed-size key from user input
             val secretKeySpec = SecretKeySpec(keyBytes, "AES")
             val ivSize = cipher.blockSize
-            val encryptedBytes = Base64.decode(encryptedText, Base64.DEFAULT)
-            val iv = encryptedBytes.copyOf(ivSize)
-            val encryptedData = encryptedBytes.copyOfRange(ivSize, encryptedBytes.size)
+            val encryptedBytesWithHash = Base64.decode(encryptedTextWithHash, Base64.DEFAULT)
+            val iv = encryptedBytesWithHash.copyOf(ivSize)
+            val encryptedData = encryptedBytesWithHash.copyOfRange(ivSize, encryptedBytesWithHash.size - 32) // 32 bytes for SHA-256 hash
+            val hash = encryptedBytesWithHash.copyOfRange(encryptedBytesWithHash.size - 32, encryptedBytesWithHash.size)
             val ivParameterSpec = IvParameterSpec(iv)
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivParameterSpec)
             val decryptedBytes = cipher.doFinal(encryptedData)
-            String(decryptedBytes, StandardCharsets.UTF_8)
+            val decryptedText = String(decryptedBytes, StandardCharsets.UTF_8)
+
+            // Verify the hash
+            if (MessageDigest.isEqual(hash, generateHash(decryptedText))) {
+                decryptedText
+            } else {
+                "Hash verification failed: Possible message tampering"
+            }
         } catch (e: Exception) {
-            encryptedText // Return original text if decryption fails
+            encryptedTextWithHash // Return original text with hash if decryption fails
         }
     }
+
+    private fun generateHash(input: String): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(input.toByteArray(StandardCharsets.UTF_8))
+    }
+
+
 
     private fun generateKey(key: String): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")

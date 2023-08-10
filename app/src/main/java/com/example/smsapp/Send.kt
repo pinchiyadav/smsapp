@@ -71,9 +71,15 @@ class Send : AppCompatActivity() {
 
     fun generateRandomIV(): ByteArray {
         val iv = ByteArray(16)
-        val secureRandom = SecureRandom()
-        secureRandom.nextBytes(iv)
+        SecureRandom().nextBytes(iv)
         return iv
+    }
+
+    fun generateRandomKey(length: Int): String {
+        val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
+        return (1..length)
+            .map { allowedChars.random() }
+            .joinToString("")
     }
 
     private fun sendSMS(mobileNumber: String, message: String) {
@@ -82,11 +88,12 @@ class Send : AppCompatActivity() {
         var plaintext = message
         var encryptedText = ""
 
-        println("Enter the 16-letter key:")
-        val key = generateRandomString(16)
 
-        if (plaintext != null && key != null && key.length == 16) {
-            encryptedText = encrypt(plaintext, key)
+
+        val key = generateRandomKey(32)// Generate a 32-byte (256-bit) key
+
+        if (plaintext != null && key != null) {
+            encryptedText = encrypt(plaintext, key.toString())
             println("Encrypted Text: $encryptedText")
         } else {
             println("Invalid input. Make sure you enter both the plaintext and a 16-letter key.")

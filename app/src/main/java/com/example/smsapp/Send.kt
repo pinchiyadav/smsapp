@@ -83,7 +83,7 @@ class Send : AppCompatActivity() {
         var encryptedText = ""
 
         println("Enter the 16-letter key:")
-        val key = "1234567887654321"
+        val key = generateRandomString(16)
 
         if (plaintext != null && key != null && key.length == 16) {
             encryptedText = encrypt(plaintext, key)
@@ -99,6 +99,19 @@ class Send : AppCompatActivity() {
             Toast.makeText(this, "Failed to send SMS", Toast.LENGTH_SHORT).show()
             e.printStackTrace()
         }
+    }
+
+    fun generateRandomString(length: Int): String {
+        val charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        val random = SecureRandom()
+        val randomString = StringBuilder(length)
+
+        repeat(length) {
+            val randomIndex = random.nextInt(charset.length)
+            randomString.append(charset[randomIndex])
+        }
+
+        return randomString.toString()
     }
 
     override fun onRequestPermissionsResult(
